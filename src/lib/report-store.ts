@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { createMemoryReport, findMemoryReport } from "@/lib/mock-report-store";
+import { generateClaudeReport } from "@/lib/claude";
+import { createMemoryReportFromDraft, findMemoryReport } from "@/lib/mock-report-store";
 import {
   buildReportContent,
   buildReportSections,
@@ -10,9 +11,10 @@ import type { BirthInput } from "@/lib/saju/types";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { ReportInsert, ReportRow, StoredReport } from "@/types";
 
-function createReportDraft(input: BirthInput) {
+async function createReportDraft(input: BirthInput) {
   const sajuData = calculateSaju(input);
-  const sections = buildReportSections(input, sajuData);
+  const claudeSections = await generateClaudeReport(input, sajuData);
+  const sections = claudeSections ?? buildReportSections(input, sajuData);
 
   return {
     input,
@@ -22,8 +24,7 @@ function createReportDraft(input: BirthInput) {
   };
 }
 
-function createReportInsert(input: BirthInput): ReportInsert {
-  const draft = createReportDraft(input);
+function createReportInsert(draft: Awaited<ReturnType<typeof createReportDraft>>): ReportInsert {
 
   return {
     birth_year: draft.input.birthYear,
@@ -55,14 +56,16 @@ function mapReportRow(row: ReportRow): StoredReport {
 }
 
 export async function createReport(input: BirthInput) {
+  const draft = await createReportDraft(input);
+
   if (!isSupabaseConfigured()) {
-    return createMemoryReport(input);
+    return createMemoryReportFromDraft(draft);
   }
 
   const client = createSupabaseAdminClient();
   const { data, error } = await client
     .from("reports")
-    .insert(createReportInsert(input))
+    .insert(createReportInsert(draft))
     .select(
       "id, birth_year, birth_month, birth_day, birth_hour, gender, saju_data, content, created_at",
     )

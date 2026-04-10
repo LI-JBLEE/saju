@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createReport } from "@/lib/report-store";
+import type { BirthInput } from "@/lib/saju/types";
 import { validateBirthInput } from "@/lib/validation";
 import type { GenerateReportResponse } from "@/types";
 
 export async function POST(request: Request) {
+  let inputSummary: Pick<
+    BirthInput,
+    "birthYear" | "birthMonth" | "birthDay" | "birthHour" | "gender"
+  > | null = null;
+
   try {
     const body = await request.json();
     const validation = validateBirthInput(body);
@@ -18,6 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
+    inputSummary = validation.data;
     const report = await createReport(validation.data);
 
     return NextResponse.json<GenerateReportResponse>({
@@ -26,7 +33,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error(
-      `[ERROR] ${new Date().toISOString()} | route: /api/report/generate | error:`,
+      `[ERROR] ${new Date().toISOString()} | route: /api/report/generate | input:`,
+      inputSummary,
+      "| error:",
       error,
     );
 
