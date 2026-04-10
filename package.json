@@ -1,0 +1,17 @@
+{
+  "name": "saju-repository-harness",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Repository-level harness engineering for the saju product spec repository.",
+  "type": "module",
+  "scripts": {
+    "repo:harness": "tsx tools/repository-harness/index.ts",
+    "repo:harness:json": "tsx tools/repository-harness/index.ts --json",
+    "verify": "npm run repo:harness"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
