@@ -12,8 +12,9 @@
     "repo:harness": "tsx tools/repository-harness/index.ts",
     "repo:harness:json": "tsx tools/repository-harness/index.ts --json",
     "start": "next start",
+    "test:saju": "tsx --test src/lib/saju/calculator.test.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run repo:harness && npm run app:harness"
+    "verify": "npm run typecheck && npm run test:saju && npm run repo:harness && npm run app:harness"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
@@ -24,6 +25,7 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.27",
+    "lunar-javascript": "^1.7.7",
     "next": "^14.2.35",
     "postcss": "^8.5.9",
     "react": "^18.3.1",
