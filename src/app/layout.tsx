@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import type { ReactNode } from "react";
+import { LocaleProvider } from "@/components/LocaleProvider";
 import "./globals.css";
 
 const sans = Noto_Sans_KR({
@@ -16,8 +17,8 @@ const serif = Noto_Serif_KR({
 });
 
 export const metadata: Metadata = {
-  title: "사주 리포트",
-  description: "생년월일시를 입력하면 AI 기반 사주 리포트를 생성하는 웹앱",
+  title: "Saju Report",
+  description: "An AI-guided saju report app with Korean and English interface support.",
 };
 
 export default function RootLayout({
@@ -26,8 +27,10 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html className={`${sans.variable} ${serif.variable}`} lang="ko">
-      <body className="font-body antialiased">{children}</body>
+    <html className={`${sans.variable} ${serif.variable}`} lang="en" suppressHydrationWarning>
+      <body className="font-body antialiased">
+        <LocaleProvider>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

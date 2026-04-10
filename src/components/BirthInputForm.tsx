@@ -2,14 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
+import { translateErrorMessage, uiCopy } from "@/lib/i18n";
 import type { Gender } from "@/lib/saju/types";
 import { LoadingTips } from "./LoadingTips";
+import { useLocale } from "./LocaleProvider";
 import type { GenerateReportResponse } from "@/types";
-
-const genderOptions: { label: string; value: Gender }[] = [
-  { label: "여", value: "female" },
-  { label: "남", value: "male" },
-];
 
 interface FormState {
   birthYear: string;
@@ -26,6 +23,8 @@ const days = Array.from({ length: 31 }, (_, index) => String(index + 1));
 const hours = Array.from({ length: 24 }, (_, index) => String(index));
 
 export function BirthInputForm() {
+  const { locale } = useLocale();
+  const copy = uiCopy[locale];
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +64,7 @@ export function BirthInputForm() {
       const payload = (await response.json()) as GenerateReportResponse;
 
       if (!response.ok || !payload.ok || !payload.reportId) {
-        setError(payload.error ?? "사주를 읽는 중 문제가 생겼습니다. 다시 시도해 주세요.");
+        setError(translateErrorMessage(payload.error ?? copy.form.genericError, locale));
         return;
       }
 
@@ -73,7 +72,7 @@ export function BirthInputForm() {
         router.push(`/report/${payload.reportId}`);
       });
     } catch {
-      setError("사주를 읽는 중 문제가 생겼습니다. 다시 시도해 주세요.");
+      setError(copy.form.genericError);
     } finally {
       setIsSubmitting(false);
     }
@@ -84,19 +83,19 @@ export function BirthInputForm() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid gap-4 sm:grid-cols-3">
           <SelectField
-            label="태어난 연도"
+            label={copy.form.birthYear}
             onChange={(value) => updateField("birthYear", value)}
             options={years}
             value={form.birthYear}
           />
           <SelectField
-            label="월"
+            label={copy.form.birthMonth}
             onChange={(value) => updateField("birthMonth", value)}
             options={months}
             value={form.birthMonth}
           />
           <SelectField
-            label="일"
+            label={copy.form.birthDay}
             onChange={(value) => updateField("birthDay", value)}
             options={days}
             value={form.birthDay}
@@ -105,16 +104,19 @@ export function BirthInputForm() {
 
         <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
           <SelectField
-            label="태어난 시간"
+            label={copy.form.birthHour}
             onChange={(value) => updateField("birthHour", value)}
             options={hours}
-            placeholder="모름"
+            placeholder={copy.form.unknownHour}
             value={form.birthHour}
           />
           <div className="space-y-2">
-            <p className="text-sm text-silverSand">성별</p>
+            <p className="text-sm text-silverSand">{copy.form.gender}</p>
             <div className="flex min-h-11 rounded-full border border-gold/20 bg-inputBg/80 p-1">
-              {genderOptions.map((option) => {
+              {[
+                { label: copy.form.female, value: "female" as Gender },
+                { label: copy.form.male, value: "male" as Gender },
+              ].map((option) => {
                 const active = form.gender === option.value;
 
                 return (
@@ -141,7 +143,7 @@ export function BirthInputForm() {
           disabled={isSubmitting || isPending}
           type="submit"
         >
-          {isSubmitting || isPending ? "사주를 읽는 중..." : "사주 보기"}
+          {isSubmitting || isPending ? copy.form.loading : copy.form.submit}
         </button>
       </form>
 

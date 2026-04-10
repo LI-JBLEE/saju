@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { uiCopy } from "@/lib/i18n";
+import { useLocale } from "./LocaleProvider";
 
 export function ShareButton() {
+  const { locale } = useLocale();
+  const copy = uiCopy[locale];
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -21,7 +25,7 @@ export function ShareButton() {
       onClick={handleCopy}
       type="button"
     >
-      {copied ? "복사됨" : "링크 복사"}
+      {copied ? copy.share.copied : copy.share.idle}
     </button>
   );
 }

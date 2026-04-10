@@ -1,6 +1,8 @@
+import { localizeOhaengLabel, uiCopy, type AppLocale } from "@/lib/i18n";
 import type { OhaengKey, SajuData } from "@/lib/saju/types";
 
 interface OhaengBarProps {
+  locale: AppLocale;
   sajuData: SajuData;
 }
 
@@ -14,14 +16,15 @@ const colors: Record<OhaengKey, string> = {
 
 const order: OhaengKey[] = ["목", "화", "토", "금", "수"];
 
-export function OhaengBar({ sajuData }: OhaengBarProps) {
+export function OhaengBar({ locale, sajuData }: OhaengBarProps) {
+  const copy = uiCopy[locale];
   const max = Math.max(...order.map((key) => sajuData.ohaengRatio[key]), 1);
 
   return (
     <div className="space-y-4 rounded-[28px] border border-gold/15 bg-midnight/80 p-6 gold-outline sm:p-8">
       <div>
-        <p className="text-xs uppercase tracking-[0.35em] text-silverSand">Five Elements</p>
-        <h2 className="mt-2 font-display text-2xl text-parchment">오행 비율</h2>
+        <p className="text-xs uppercase tracking-[0.35em] text-silverSand">{copy.elements.eyebrow}</p>
+        <h2 className="mt-2 font-display text-2xl text-parchment">{copy.elements.title}</h2>
       </div>
       <div className="space-y-4">
         {order.map((key) => {
@@ -29,8 +32,8 @@ export function OhaengBar({ sajuData }: OhaengBarProps) {
           const width = `${Math.max((value / max) * 100, 8)}%`;
 
           return (
-            <div className="grid grid-cols-[40px_1fr_36px] items-center gap-3" key={key}>
-              <span className="text-sm text-silverSand">{key}</span>
+            <div className="grid grid-cols-[72px_1fr_36px] items-center gap-3" key={key}>
+              <span className="text-sm text-silverSand">{localizeOhaengLabel(key, locale)}</span>
               <div className="h-3 overflow-hidden rounded-full bg-deepNight/80">
                 <div
                   className={`h-full rounded-full bg-gradient-to-r ${colors[key]}`}

@@ -1,22 +1,25 @@
+import { localizeOhaengLabel, uiCopy, type AppLocale } from "@/lib/i18n";
 import type { SajuData } from "@/lib/saju/types";
 
 interface SajuChartProps {
+  locale: AppLocale;
   sajuData: SajuData;
 }
 
-const labels = [
-  { key: "year", label: "년주" },
-  { key: "month", label: "월주" },
-  { key: "day", label: "일주" },
-  { key: "hour", label: "시주" },
-] as const;
+export function SajuChart({ locale, sajuData }: SajuChartProps) {
+  const copy = uiCopy[locale];
+  const labels = [
+    { key: "year", label: copy.chart.year },
+    { key: "month", label: copy.chart.month },
+    { key: "day", label: copy.chart.day },
+    { key: "hour", label: copy.chart.hour },
+  ] as const;
 
-export function SajuChart({ sajuData }: SajuChartProps) {
   return (
     <div className="space-y-4 rounded-[28px] border border-gold/15 bg-midnight/80 p-6 gold-outline sm:p-8">
       <div>
-        <p className="text-xs uppercase tracking-[0.35em] text-silverSand">Saju Chart</p>
-        <h2 className="mt-2 font-display text-2xl text-parchment">사주 기본 구성</h2>
+        <p className="text-xs uppercase tracking-[0.35em] text-silverSand">{copy.chart.eyebrow}</p>
+        <h2 className="mt-2 font-display text-2xl text-parchment">{copy.chart.title}</h2>
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {labels.map(({ key, label }) => {
@@ -40,11 +43,13 @@ export function SajuChart({ sajuData }: SajuChartProps) {
                       {pillar.jiji}
                     </div>
                   </div>
-                  <p className="text-sm text-silverSand">{pillar.ohaeng}</p>
+                  <p className="text-sm text-silverSand">
+                    {localizeOhaengLabel(pillar.ohaeng, locale)}
+                  </p>
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-dashed border-gold/15 py-10 text-sm text-silverSand">
-                  시간 모름
+                  {copy.chart.unknown}
                 </div>
               )}
             </article>
