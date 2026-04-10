@@ -5,9 +5,12 @@
   "description": "Repository-level harness engineering for the saju product spec repository.",
   "type": "module",
   "scripts": {
+    "app:harness": "tsx tools/application-harness/index.ts",
+    "app:harness:json": "tsx tools/application-harness/index.ts --json",
     "repo:harness": "tsx tools/repository-harness/index.ts",
     "repo:harness:json": "tsx tools/repository-harness/index.ts --json",
-    "verify": "npm run repo:harness"
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run repo:harness && npm run app:harness"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
