@@ -38,7 +38,7 @@ Supabase (PostgreSQL) 기반.
     "day":   { "cheongan": "戊", "jiji": "申", "ohaeng": "토" },
     "hour":  { "cheongan": "庚", "jiji": "戌", "ohaeng": "금" }
   },
-  "ohaeng_ratio": {
+  "ohaengRatio": {
     "목": 1,
     "화": 2,
     "토": 2,

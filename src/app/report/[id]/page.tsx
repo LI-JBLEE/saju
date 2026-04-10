@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ReportViewer } from "@/components/ReportViewer";
 import { ShareButton } from "@/components/ShareButton";
-import { findMemoryReport } from "@/lib/mock-report-store";
+import { findReport } from "@/lib/report-store";
 
 interface ReportPageProps {
   params: {
@@ -9,8 +9,41 @@ interface ReportPageProps {
   };
 }
 
-export default function ReportPage({ params }: ReportPageProps) {
-  const report = findMemoryReport(params.id);
+export default async function ReportPage({ params }: ReportPageProps) {
+  let report = null;
+  let hasLoadError = false;
+
+  try {
+    report = await findReport(params.id);
+  } catch (error) {
+    hasLoadError = true;
+    console.error(
+      `[ERROR] ${new Date().toISOString()} | route: /report/${params.id} | error:`,
+      error,
+    );
+  }
+
+  if (hasLoadError) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-16 sm:px-6">
+        <section className="w-full rounded-[32px] border border-gold/18 bg-midnight/88 p-8 gold-outline sm:p-10">
+          <p className="text-xs uppercase tracking-[0.4em] text-silverSand">Report Error</p>
+          <h1 className="mt-4 font-display text-3xl text-parchment sm:text-4xl">
+            리포트를 불러오는 중 문제가 생겼습니다
+          </h1>
+          <p className="mt-4 text-[15px] leading-8 text-parchment/80">
+            잠시 후 다시 접속해 보시거나, 메인 화면에서 새 리포트를 생성해 주세요.
+          </p>
+          <Link
+            className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-r from-gold to-[#a0845a] px-5 py-3 text-sm font-medium text-deepNight transition hover:brightness-110"
+            href="/"
+          >
+            메인으로 돌아가기
+          </Link>
+        </section>
+      </main>
+    );
+  }
 
   if (!report) {
     return (
@@ -21,7 +54,7 @@ export default function ReportPage({ params }: ReportPageProps) {
             리포트를 찾을 수 없습니다
           </h1>
           <p className="mt-4 text-[15px] leading-8 text-parchment/80">
-            새로고침이나 서버 재시작 이후에는 개발용 임시 리포트가 사라질 수 있습니다. 다시
+            이미 만료된 개발용 임시 리포트이거나, 아직 저장되지 않은 링크일 수 있습니다. 다시
             입력해서 새로운 리포트를 만들어 보세요.
           </p>
           <Link
@@ -47,7 +80,9 @@ export default function ReportPage({ params }: ReportPageProps) {
             {report.input.gender === "female" ? "여" : "남"}
           </p>
           <p className="mt-1 text-xs leading-6 text-silverSand">
-            현재는 메모리 기반 개발용 저장소를 사용하고 있습니다.
+            {report.storage === "supabase"
+              ? "Supabase에 저장된 리포트입니다."
+              : "현재는 메모리 기반 개발용 저장소를 사용하고 있습니다."}
           </p>
         </div>
         <ShareButton />

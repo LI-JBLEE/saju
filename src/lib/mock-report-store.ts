@@ -1,6 +1,6 @@
 import { calculateSaju } from "@/lib/saju/calculator";
+import { buildReportContent, buildReportSections } from "@/lib/report-builder";
 import type { BirthInput } from "@/lib/saju/types";
-import { buildReportSections } from "@/lib/report-builder";
 import type { StoredReport } from "@/types";
 
 const reportStore = new Map<string, StoredReport>();
@@ -9,7 +9,7 @@ export function createMemoryReport(input: BirthInput) {
   const sajuData = calculateSaju(input);
   const sections = buildReportSections(input, sajuData);
   const id = crypto.randomUUID();
-  const content = sections.map((section) => `${section.title}\n${section.content}`).join("\n\n");
+  const content = buildReportContent(sections);
 
   const report: StoredReport = {
     id,

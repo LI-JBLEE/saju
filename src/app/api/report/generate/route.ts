@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createMemoryReport } from "@/lib/mock-report-store";
+import { createReport } from "@/lib/report-store";
 import { validateBirthInput } from "@/lib/validation";
 import type { GenerateReportResponse } from "@/types";
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const report = createMemoryReport(validation.data);
+    const report = await createReport(validation.data);
 
     return NextResponse.json<GenerateReportResponse>({
       ok: true,
