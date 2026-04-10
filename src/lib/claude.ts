@@ -56,15 +56,15 @@ function buildSystemPrompt() {
   const sectionSchema = reportSectionDefinitions
     .map(
       (section, index) =>
-        `${index + 1}. "${section.title}" 섹션을 반드시 포함하고, 각 content는 220자 이상 한국어 문단으로 작성`,
+        `${index + 1}. <section title="${section.title}">...</section> 형식으로 반드시 포함하고, 각 content는 220자 이상 한국어 문단으로 작성`,
     )
     .join("\n");
 
   return [
     "너는 한국어 사주 리포트를 작성하는 전문 에디터다.",
-    "출력은 반드시 JSON 하나만 반환한다. 마크다운 코드펜스는 금지한다.",
-    '반환 형식은 {"sections":[{"title":"...", "content":"..."}]} 이다.',
-    "sections 배열 길이는 정확히 7이어야 하며, title은 아래 순서와 완전히 일치해야 한다.",
+    "출력은 반드시 아래 형식의 태그만 사용한 평문으로 반환한다. 마크다운 코드펜스와 JSON은 금지한다.",
+    '<section title="사주 기본 정보">내용</section> 같은 형식으로 정확히 7개 섹션을 순서대로 작성한다.',
+    "section title은 아래 순서와 완전히 일치해야 한다.",
     sectionSchema,
     "6번째 '올해 운세' 섹션에는 반드시 현재 연도를 숫자로 포함한다.",
     "태어난 시간이 없으면 시주 단정 표현을 쓰지 말고 조심스럽게 설명한다.",
@@ -124,54 +124,34 @@ function extractResponseText(message: Message) {
   return parts.join("\n").trim();
 }
 
-function extractJsonText(value: string) {
-  const fencedMatch = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+function parseTaggedSections(rawText: string) {
+  const matches = [...rawText.matchAll(/<section\s+title="([^"]+)">([\s\S]*?)<\/section>/g)];
 
-  if (fencedMatch?.[1]) {
-    return fencedMatch[1].trim();
+  if (matches.length === 0) {
+    throw new Error("Claude response is missing tagged sections.");
   }
 
-  const firstBrace = value.indexOf("{");
-  const lastBrace = value.lastIndexOf("}");
-
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error("Claude response did not contain a JSON object.");
-  }
-
-  return value.slice(firstBrace, lastBrace + 1);
-}
-
-function parseClaudeSections(rawText: string) {
-  const parsed = JSON.parse(extractJsonText(rawText)) as {
-    sections?: Array<{
-      title?: unknown;
-      content?: unknown;
-    }>;
-  };
-
-  if (!Array.isArray(parsed.sections)) {
-    throw new Error("Claude response is missing sections.");
-  }
-
-  const sections: ReportSectionData[] = parsed.sections.map((section, index) => {
+  const sections: ReportSectionData[] = matches.map((match, index) => {
     const definition = reportSectionDefinitions[index];
+    const title = match[1]?.trim();
+    const content = match[2]?.trim();
 
     if (!definition) {
       throw new Error("Claude response returned too many sections.");
     }
 
-    if (section.title !== definition.title) {
+    if (title !== definition.title) {
       throw new Error(`Claude response title mismatch at index ${index}.`);
     }
 
-    if (typeof section.content !== "string" || section.content.trim().length < 80) {
+    if (!content || content.length < 80) {
       throw new Error(`Claude response content is too short for ${definition.title}.`);
     }
 
     return {
       title: definition.title,
       icon: definition.icon,
-      content: section.content.trim(),
+      content,
     };
   });
 
@@ -192,6 +172,54 @@ function parseClaudeSections(rawText: string) {
   }
 
   return sections;
+}
+
+function extractJsonText(value: string) {
+  const fencedMatch = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  const firstBrace = value.indexOf("{");
+  const lastBrace = value.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("Claude response did not contain a JSON object.");
+  }
+
+  return value.slice(firstBrace, lastBrace + 1);
+}
+
+function parseJsonSections(rawText: string) {
+  const parsed = JSON.parse(extractJsonText(rawText)) as {
+    sections?: Array<{
+      title?: unknown;
+      content?: unknown;
+    }>;
+  };
+
+  if (!Array.isArray(parsed.sections)) {
+    throw new Error("Claude response is missing sections.");
+  }
+
+  const taggedText = parsed.sections
+    .map((section) => `<section title="${String(section.title ?? "")}">${String(section.content ?? "")}</section>`)
+    .join("\n");
+
+  return parseTaggedSections(taggedText);
+}
+
+function parseClaudeSections(rawText: string) {
+  try {
+    return parseTaggedSections(rawText);
+  } catch (tagError) {
+    try {
+      return parseJsonSections(rawText);
+    } catch {
+      throw tagError;
+    }
+  }
 }
 
 async function delay(milliseconds: number) {

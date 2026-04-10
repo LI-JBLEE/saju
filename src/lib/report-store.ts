@@ -13,7 +13,17 @@ import type { ReportInsert, ReportRow, StoredReport } from "@/types";
 
 async function createReportDraft(input: BirthInput) {
   const sajuData = calculateSaju(input);
-  const claudeSections = await generateClaudeReport(input, sajuData);
+  let claudeSections = null;
+
+  try {
+    claudeSections = await generateClaudeReport(input, sajuData);
+  } catch (error) {
+    console.error(
+      `[WARN] ${new Date().toISOString()} | report-store:createReportDraft | Claude generation failed, falling back to local report builder.`,
+      error,
+    );
+  }
+
   const sections = claudeSections ?? buildReportSections(input, sajuData);
 
   return {

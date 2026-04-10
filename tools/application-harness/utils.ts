@@ -70,7 +70,13 @@ export function collectWorkspaceFiles(
   const results: string[] = [];
 
   for (const entry of entries) {
-    if (entry.name === ".git" || entry.name === "node_modules") {
+    if (
+      entry.name === ".git" ||
+      entry.name === ".next" ||
+      entry.name === ".codex-temp" ||
+      entry.name === "node_modules" ||
+      entry.name === ".env.local"
+    ) {
       continue;
     }
 
