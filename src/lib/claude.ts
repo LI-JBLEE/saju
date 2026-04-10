@@ -8,6 +8,16 @@ const anthropicModel = "claude-sonnet-4-6";
 const anthropicTimeoutMs = 60_000;
 const anthropicRetryCount = 2;
 const anthropicRetryDelayMs = 1_000;
+const anthropicMaxTokens = 4_096;
+const sectionFieldOrder = [
+  "basic_info",
+  "personality",
+  "career",
+  "romance",
+  "health",
+  "yearly_fortune",
+  "advice",
+] as const;
 
 let anthropicClient: Anthropic | null = null;
 
@@ -56,15 +66,13 @@ function buildSystemPrompt() {
   const sectionSchema = reportSectionDefinitions
     .map(
       (section, index) =>
-        `${index + 1}. <section title="${section.title}">...</section> 형식으로 반드시 포함하고, 각 content는 220자 이상 한국어 문단으로 작성`,
+        `${index + 1}. "${section.title}" 내용은 220자 이상 한국어 문단으로 작성`,
     )
     .join("\n");
 
   return [
     "너는 한국어 사주 리포트를 작성하는 전문 에디터다.",
-    "출력은 반드시 아래 형식의 태그만 사용한 평문으로 반환한다. 마크다운 코드펜스와 JSON은 금지한다.",
-    '<section title="사주 기본 정보">내용</section> 같은 형식으로 정확히 7개 섹션을 순서대로 작성한다.',
-    "section title은 아래 순서와 완전히 일치해야 한다.",
+    "출력 형식은 API의 structured output schema로 강제되므로 코드펜스, JSON 설명, 서문 없이 값만 채운다.",
     sectionSchema,
     "6번째 '올해 운세' 섹션에는 반드시 현재 연도를 숫자로 포함한다.",
     "태어난 시간이 없으면 시주 단정 표현을 쓰지 말고 조심스럽게 설명한다.",
@@ -112,6 +120,45 @@ function getAnthropicClient() {
   return anthropicClient;
 }
 
+function buildStructuredOutputSchema() {
+  return {
+    type: "object",
+    properties: {
+      basic_info: {
+        type: "string",
+        description: "사주 기본 정보. 년주·월주·일주·시주, 오행 비율, 용신/기신을 바탕으로 220자 이상 설명",
+      },
+      personality: {
+        type: "string",
+        description: "타고난 성격 & 기질. 일간 기준 성격 분석, 강점과 약점, 대인관계 스타일을 220자 이상 설명",
+      },
+      career: {
+        type: "string",
+        description: "직업 & 재물운. 적성, 일하는 방식, 재물 흐름을 220자 이상 설명",
+      },
+      romance: {
+        type: "string",
+        description: "연애 & 결혼운. 성별에 맞는 관계 묘사와 배우자/결혼 관련 해석을 220자 이상 설명",
+      },
+      health: {
+        type: "string",
+        description: "건강운. 의료 진단처럼 단정하지 않고 생활 관리 조언 중심으로 220자 이상 설명",
+      },
+      yearly_fortune: {
+        type: "string",
+        description: "올해 운세. 현재 연도 숫자, 상반기/하반기 흐름, 핵심 키워드를 포함해 220자 이상 설명",
+      },
+      advice: {
+        type: "string",
+        description:
+          "종합 조언. 현재 시점 기준 조언, 주의사항, 행운의 방향/색상/숫자를 포함하고 마지막 문장은 반드시 '본 리포트는 AI가 생성한 참고용 콘텐츠입니다.' 로 끝나는 220자 이상 설명",
+      },
+    },
+    required: [...sectionFieldOrder],
+    additionalProperties: false,
+  } as const;
+}
+
 function extractResponseText(message: Message) {
   const parts: string[] = [];
 
@@ -122,56 +169,6 @@ function extractResponseText(message: Message) {
   }
 
   return parts.join("\n").trim();
-}
-
-function parseTaggedSections(rawText: string) {
-  const matches = [...rawText.matchAll(/<section\s+title="([^"]+)">([\s\S]*?)<\/section>/g)];
-
-  if (matches.length === 0) {
-    throw new Error("Claude response is missing tagged sections.");
-  }
-
-  const sections: ReportSectionData[] = matches.map((match, index) => {
-    const definition = reportSectionDefinitions[index];
-    const title = match[1]?.trim();
-    const content = match[2]?.trim();
-
-    if (!definition) {
-      throw new Error("Claude response returned too many sections.");
-    }
-
-    if (title !== definition.title) {
-      throw new Error(`Claude response title mismatch at index ${index}.`);
-    }
-
-    if (!content || content.length < 80) {
-      throw new Error(`Claude response content is too short for ${definition.title}.`);
-    }
-
-    return {
-      title: definition.title,
-      icon: definition.icon,
-      content,
-    };
-  });
-
-  if (sections.length !== reportSectionDefinitions.length) {
-    throw new Error("Claude response returned the wrong number of sections.");
-  }
-
-  const yearlySection = sections[5];
-  const finalSection = sections[6];
-  const currentYear = getCurrentYear();
-
-  if (!yearlySection?.content.includes(String(currentYear))) {
-    throw new Error("Claude yearly section is missing the current year.");
-  }
-
-  if (!finalSection?.content.includes("본 리포트는 AI가 생성한 참고용 콘텐츠입니다.")) {
-    throw new Error("Claude report is missing the required disclaimer.");
-  }
-
-  return sections;
 }
 
 function extractJsonText(value: string) {
@@ -191,35 +188,40 @@ function extractJsonText(value: string) {
   return value.slice(firstBrace, lastBrace + 1);
 }
 
-function parseJsonSections(rawText: string) {
-  const parsed = JSON.parse(extractJsonText(rawText)) as {
-    sections?: Array<{
-      title?: unknown;
-      content?: unknown;
-    }>;
-  };
-
-  if (!Array.isArray(parsed.sections)) {
-    throw new Error("Claude response is missing sections.");
-  }
-
-  const taggedText = parsed.sections
-    .map((section) => `<section title="${String(section.title ?? "")}">${String(section.content ?? "")}</section>`)
-    .join("\n");
-
-  return parseTaggedSections(taggedText);
-}
-
 function parseClaudeSections(rawText: string) {
-  try {
-    return parseTaggedSections(rawText);
-  } catch (tagError) {
-    try {
-      return parseJsonSections(rawText);
-    } catch {
-      throw tagError;
+  const parsed = JSON.parse(extractJsonText(rawText)) as Record<string, unknown>;
+  const sections: ReportSectionData[] = sectionFieldOrder.map((field, index) => {
+    const definition = reportSectionDefinitions[index];
+    const content = parsed[field];
+
+    if (!definition) {
+      throw new Error(`Missing section definition for ${field}.`);
     }
+
+    if (typeof content !== "string" || content.trim().length < 80) {
+      throw new Error(`Claude response content is too short for ${definition.title}.`);
+    }
+
+    return {
+      title: definition.title,
+      icon: definition.icon,
+      content: content.trim(),
+    };
+  });
+
+  const yearlySection = sections[5];
+  const finalSection = sections[6];
+  const currentYear = getCurrentYear();
+
+  if (!yearlySection?.content.includes(String(currentYear))) {
+    throw new Error("Claude yearly section is missing the current year.");
   }
+
+  if (!finalSection?.content.includes("본 리포트는 AI가 생성한 참고용 콘텐츠입니다.")) {
+    throw new Error("Claude report is missing the required disclaimer.");
+  }
+
+  return sections;
 }
 
 async function delay(milliseconds: number) {
@@ -248,7 +250,7 @@ export async function generateClaudeReport(
     try {
       const message = await client.messages.create({
         model: anthropicModel,
-        max_tokens: 2_600,
+        max_tokens: anthropicMaxTokens,
         stream: false,
         system,
         messages: [
@@ -257,7 +259,21 @@ export async function generateClaudeReport(
             content: userPrompt,
           },
         ],
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: buildStructuredOutputSchema(),
+          },
+        },
       });
+
+      if (message.stop_reason === "max_tokens") {
+        throw new Error("Claude response hit max_tokens before completing structured output.");
+      }
+
+      if (message.stop_reason === "refusal") {
+        throw new Error("Claude refused the report generation request.");
+      }
 
       return parseClaudeSections(extractResponseText(message));
     } catch (error) {
