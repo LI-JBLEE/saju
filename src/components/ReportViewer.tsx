@@ -17,6 +17,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
   const { locale } = useLocale();
   const storedLocale = inferReportContentLocale(report.sections);
   const sections =
+    // Older saved reports may not match the current UI locale, so we rebuild the view copy on demand.
     report.sections.length === 0 || storedLocale !== locale
       ? buildReportSections(report.input, report.sajuData, locale)
       : report.sections;
