@@ -1,3 +1,4 @@
+import type { AppLocale } from "@/lib/i18n";
 import type { BirthInput, SajuData } from "@/lib/saju/types";
 
 export interface ReportSectionData {
@@ -18,7 +19,9 @@ export interface StoredReport {
   storage: ReportStorage;
 }
 
-export interface GenerateReportRequest extends BirthInput {}
+export interface GenerateReportRequest extends BirthInput {
+  locale?: AppLocale;
+}
 
 export interface GenerateReportResponse {
   ok: boolean;

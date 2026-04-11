@@ -1,6 +1,8 @@
 "use client";
 
 import { localizeSectionTitle } from "@/lib/i18n";
+import { buildReportSections } from "@/lib/report-builder";
+import { inferReportContentLocale } from "@/lib/report-locale";
 import type { StoredReport } from "@/types";
 import { OhaengBar } from "./OhaengBar";
 import { ReportSection } from "./ReportSection";
@@ -13,6 +15,11 @@ interface ReportViewerProps {
 
 export function ReportViewer({ report }: ReportViewerProps) {
   const { locale } = useLocale();
+  const storedLocale = inferReportContentLocale(report.sections);
+  const sections =
+    report.sections.length === 0 || storedLocale !== locale
+      ? buildReportSections(report.input, report.sajuData, locale)
+      : report.sections;
 
   return (
     <div className="space-y-10">
@@ -21,7 +28,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
         <OhaengBar locale={locale} sajuData={report.sajuData} />
       </div>
       <div className="space-y-6">
-        {report.sections.map((section) => (
+        {sections.map((section) => (
           <ReportSection
             content={section.content}
             icon={section.icon}

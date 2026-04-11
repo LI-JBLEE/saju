@@ -58,6 +58,7 @@ export function BirthInputForm() {
           birthDay: Number(form.birthDay),
           birthHour: form.birthHour === "" ? null : Number(form.birthHour),
           gender: form.gender,
+          locale,
         }),
       });
 

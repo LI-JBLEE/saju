@@ -1,3 +1,4 @@
+import { defaultLocale, type AppLocale } from "@/lib/i18n";
 import { calculateSaju } from "@/lib/saju/calculator";
 import { buildReportContent, buildReportSections } from "@/lib/report-builder";
 import type { BirthInput, SajuData } from "@/lib/saju/types";
@@ -30,9 +31,9 @@ export function createMemoryReportFromDraft(draft: MemoryReportDraft) {
   return report;
 }
 
-export function createMemoryReport(input: BirthInput) {
+export function createMemoryReport(input: BirthInput, locale: AppLocale = defaultLocale) {
   const sajuData = calculateSaju(input);
-  const sections = buildReportSections(input, sajuData);
+  const sections = buildReportSections(input, sajuData, locale);
 
   return createMemoryReportFromDraft({
     input,

@@ -1,3 +1,4 @@
+import { defaultLocale, localizeOhaengLabel, type AppLocale } from "@/lib/i18n";
 import type { BirthInput, OhaengKey, SajuData } from "@/lib/saju/types";
 import type { ReportSectionData } from "@/types";
 
@@ -14,16 +15,28 @@ export const reportSectionDefinitions = [
   icon: string;
 }>;
 
-function buildEnergySentence(ohaengRatio: Record<OhaengKey, number>) {
+function buildEnergySentence(ohaengRatio: Record<OhaengKey, number>, locale: AppLocale) {
   const dominant = Object.entries(ohaengRatio).sort((left, right) => right[1] - left[1])[0]?.[0];
   const subtle = Object.entries(ohaengRatio).sort((left, right) => left[1] - right[1])[0]?.[0];
+
+  if (locale === "en") {
+    return `Among the five elements, ${dominant ? localizeOhaengLabel(dominant as OhaengKey, locale) : "one current"} feels especially vivid, while ${subtle ? localizeOhaengLabel(subtle as OhaengKey, locale) : "another current"} becomes more balanced when you support it consciously.`;
+  }
 
   return `오행의 흐름을 보면 ${dominant}의 기운이 비교적 또렷하고 ${subtle}의 기운은 의식적으로 보완할수록 균형이 살아나는 구조입니다.`;
 }
 
-function buildHourSentence(input: BirthInput) {
+function buildHourSentence(input: BirthInput, locale: AppLocale) {
   if (input.birthHour === null) {
+    if (locale === "en") {
+      return "Because the birth hour is unknown, details related to the hour pillar are interpreted more carefully and with softer certainty.";
+    }
+
     return "태어난 시간을 모르는 기준으로 분석했기 때문에 시주에 해당하는 세부 해석은 조심스럽게 다루었습니다.";
+  }
+
+  if (locale === "en") {
+    return `The reading also reflects the hour pillar based on ${String(input.birthHour).padStart(2, "0")}:00, which adds more nuance to emotional rhythm and daily momentum.`;
   }
 
   return `태어난 시간 ${String(input.birthHour).padStart(2, "0")}시 기준의 시주 흐름까지 함께 참고해 세부 감정선과 일상의 리듬도 읽었습니다.`;
@@ -71,19 +84,67 @@ export function parseReportContent(content: string): ReportSectionData[] {
   return sections;
 }
 
-export function buildReportSections(input: BirthInput, sajuData: SajuData): ReportSectionData[] {
+export function buildReportSections(
+  input: BirthInput,
+  sajuData: SajuData,
+  locale: AppLocale = defaultLocale,
+): ReportSectionData[] {
   const currentYear = currentYearText();
-  const energySentence = buildEnergySentence(sajuData.ohaengRatio);
+  const energySentence = buildEnergySentence(sajuData.ohaengRatio, locale);
   const relationshipTone =
-    input.gender === "female"
-      ? "상대의 성실함과 정서적 안정감을 중요하게 보는 편이라, 말보다 행동에서 신뢰를 확인하려는 경향이 큽니다."
-      : "감정이 생겨도 바로 표현하기보다 상대의 반응과 분위기를 충분히 살피며, 신뢰가 생기면 오래 책임지려는 면이 강합니다.";
+    locale === "en"
+      ? input.gender === "female"
+        ? "In relationships, you tend to value steadiness and emotional reliability, often trusting actions more than dramatic words."
+        : "Even when feelings appear quickly, you usually observe the atmosphere first and grow more openly committed once trust has settled."
+      : input.gender === "female"
+        ? "상대의 성실함과 정서적 안정감을 중요하게 보는 편이라, 말보다 행동에서 신뢰를 확인하려는 경향이 큽니다."
+        : "감정이 생겨도 바로 표현하기보다 상대의 반응과 분위기를 충분히 살피며, 신뢰가 생기면 오래 책임지려는 면이 강합니다.";
+
+  if (locale === "en") {
+    return [
+      {
+        title: reportSectionDefinitions[0].title,
+        icon: reportSectionDefinitions[0].icon,
+        content: `Reading the year, month, day${input.birthHour === null ? "" : ", and hour"} pillars together suggests a chart with a grounded center and a quietly sensitive emotional layer. Your day master ${sajuData.ilgan} acts as the axis of the reading, while the useful element leans toward ${localizeOhaengLabel(sajuData.yongsin, locale)} and the challenging current leans toward ${localizeOhaengLabel(sajuData.gisin, locale)}. ${energySentence} ${buildHourSentence(input, locale)}`,
+      },
+      {
+        title: reportSectionDefinitions[1].title,
+        icon: reportSectionDefinitions[1].icon,
+        content: "At your core, you appear thoughtful, observant, and less interested in reacting quickly than in understanding what is really happening beneath the surface. Even when you look calm from the outside, your inner process is often active, comparing possibilities and sensing mood, pace, and intention before making a move. This creates a natural strength in judgment, patience, and emotional endurance. When pressure rises, you are more likely to regain your center than collapse, which means your long-term stability often comes from your own ability to reset your internal standard.",
+      },
+      {
+        title: reportSectionDefinitions[2].title,
+        icon: reportSectionDefinitions[2].icon,
+        content: "Career-wise, your chart favors environments where trust, craft, and accumulated credibility matter more than short bursts of competition. You are likely to do well in work that combines structure with human understanding, or analysis with taste and interpretation. Financially, the chart points more toward steady building than dramatic leaps. Money tends to grow best when you understand the system you are entering and can sustain your rhythm over time. Caution around unclear investments or emotionally driven decisions will usually protect your momentum rather than slow it down.",
+      },
+      {
+        title: reportSectionDefinitions[3].title,
+        icon: reportSectionDefinitions[3].icon,
+        content: `${relationshipTone} You are generally better matched with connections that feel emotionally steady, conversationally natural, and realistic in everyday life rather than flashy or chaotic. As intimacy deepens, responsibility tends to become more visible in the way you care, commit, and remain present. Marriage energy in your chart opens most naturally when emotional clarity and practical stability arrive together, so timing matters more than external pressure. Relationships become healthier when you express your own needs more clearly instead of protecting harmony at your own expense.`,
+      },
+      {
+        title: reportSectionDefinitions[4].title,
+        icon: reportSectionDefinitions[4].icon,
+        content: "Health energy here looks less like dramatic extremes and more like sensitivity to disrupted routine. When fatigue accumulates, the first signs are more likely to show up through foundational systems such as digestion, sleep quality, circulation, or general recovery pace. This suggests that your best long-term strategy is not intensity but rhythm: consistent meals, more reliable sleep, and earlier response to small discomforts. The chart does not read like inevitable weakness so much as a system that performs best when life remains paced and recoverable.",
+      },
+      {
+        title: reportSectionDefinitions[5].title,
+        icon: reportSectionDefinitions[5].icon,
+        content: `${currentYear} carries a combined rhythm of recalibration and expansion for you. The first half of the year is better for organizing priorities, clearing emotional noise, and tightening the structure around your work and relationships. As the second half opens, new opportunities and proposals may become more visible, but your strongest results will come from choosing what remains meaningful rather than what merely looks exciting. The key themes for ${currentYear} are alignment over speed, steadiness over anxiety, and rhythm over urgency.`,
+      },
+      {
+        title: reportSectionDefinitions[6].title,
+        icon: reportSectionDefinitions[6].icon,
+        content: "The clearest advice for this phase of life is to stop measuring your timing against somebody else's pace. What looks slow from the outside may actually be a season in which discernment, resilience, and direction are quietly becoming sharper. Important choices are likely to go better when made from a settled routine rather than an emotionally urgent day. Helpful luck symbols can be treated less as superstition and more as tools for focus: directions that feel clarifying, colors that steady you, and numbers that help you remember intention. This report was generated by AI and is intended for reference only.",
+      },
+    ];
+  }
 
   return [
     {
       title: reportSectionDefinitions[0].title,
       icon: reportSectionDefinitions[0].icon,
-      content: `년주·월주·일주${input.birthHour === null ? "" : "·시주"}를 기준으로 보면 전체 흐름은 단단한 중심 위에 감수성이 얹힌 구조에 가깝습니다. 일간 ${sajuData.ilgan}의 성질이 중심을 잡고 있고, 용신은 ${sajuData.yongsin}, 기신은 ${sajuData.gisin}으로 읽힙니다. ${energySentence} ${buildHourSentence(input)}`,
+      content: `년주·월주·일주${input.birthHour === null ? "" : "·시주"}를 기준으로 보면 전체 흐름은 단단한 중심 위에 감수성이 얹힌 구조에 가깝습니다. 일간 ${sajuData.ilgan}의 성질이 중심을 잡고 있고, 용신은 ${sajuData.yongsin}, 기신은 ${sajuData.gisin}으로 읽힙니다. ${energySentence} ${buildHourSentence(input, locale)}`,
     },
     {
       title: reportSectionDefinitions[1].title,

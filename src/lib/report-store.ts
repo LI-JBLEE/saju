@@ -1,3 +1,4 @@
+import { defaultLocale, type AppLocale } from "@/lib/i18n";
 import { cache } from "react";
 import { generateClaudeReport } from "@/lib/claude";
 import { createMemoryReportFromDraft, findMemoryReport } from "@/lib/mock-report-store";
@@ -11,12 +12,12 @@ import type { BirthInput } from "@/lib/saju/types";
 import { createSupabaseAdminClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { ReportInsert, ReportRow, StoredReport } from "@/types";
 
-async function createReportDraft(input: BirthInput) {
+async function createReportDraft(input: BirthInput, locale: AppLocale = defaultLocale) {
   const sajuData = calculateSaju(input);
   let claudeSections = null;
 
   try {
-    claudeSections = await generateClaudeReport(input, sajuData);
+    claudeSections = await generateClaudeReport(input, sajuData, locale);
   } catch (error) {
     console.error(
       `[WARN] ${new Date().toISOString()} | report-store:createReportDraft | Claude generation failed, falling back to local report builder.`,
@@ -24,7 +25,7 @@ async function createReportDraft(input: BirthInput) {
     );
   }
 
-  const sections = claudeSections ?? buildReportSections(input, sajuData);
+  const sections = claudeSections ?? buildReportSections(input, sajuData, locale);
 
   return {
     input,
@@ -65,8 +66,8 @@ function mapReportRow(row: ReportRow): StoredReport {
   };
 }
 
-export async function createReport(input: BirthInput) {
-  const draft = await createReportDraft(input);
+export async function createReport(input: BirthInput, locale: AppLocale = defaultLocale) {
+  const draft = await createReportDraft(input, locale);
 
   if (!isSupabaseConfigured()) {
     return createMemoryReportFromDraft(draft);
